@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>네트워크 관리사 2급 학습 대시보드</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f3f4f6; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .radio-custom:checked + div { background-color: #e0f2fe; border-color: #3b82f6; }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col h-full hidden md:flex transition-all duration-300">
+        <div class="p-6 text-center border-b border-slate-700">
+            <h1 class="text-2xl font-bold text-blue-400"><i class="fas fa-network-wired mr-2"></i>NA2 Master</h1>
+            <p class="text-sm text-slate-400 mt-2">네트워크 관리사 2급</p>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="switchTab('dashboard')" class="nav-btn w-full flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-left" data-target="dashboard">
+                <i class="fas fa-chart-pie w-6"></i> <span>학습 대시보드</span>
+            </button>
+            <button onclick="switchTab('theory')" class="nav-btn w-full flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-left" data-target="theory">
+                <i class="fas fa-book w-6"></i> <span>이론 학습</span>
+            </button>
+            <button onclick="switchTab('written')" class="nav-btn w-full flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-left" data-target="written">
+                <i class="fas fa-edit w-6"></i> <span>필기 모의고사</span>
+            </button>
+            <button onclick="switchTab('practical')" class="nav-btn w-full flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-left" data-target="practical">
+                <i class="fas fa-laptop-code w-6"></i> <span>실기(시뮬레이션)</span>
+            </button>
+            <button onclick="switchTab('review')" class="nav-btn w-full flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-left" data-target="review">
+                <i class="fas fa-clipboard-check w-6"></i> <span>오답 노트</span>
+            </button>
+        </nav>
+        <div class="p-4 border-t border-slate-700 text-xs text-slate-500 text-center">
+            Local Storage 기반 시스템<br>데이터가 기기에 안전하게 저장됩니다.
+            <button onclick="clearData()" class="mt-3 text-red-400 hover:text-red-300 underline">데이터 초기화</button>
+        </div>
+    </aside>
+
+    <!-- Mobile Nav Header -->
+    <header class="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center absolute w-full z-50">
+        <h1 class="text-xl font-bold"><i class="fas fa-network-wired mr-2"></i>NA2</h1>
+        <select id="mobileMenu" onchange="switchTab(this.value)" class="bg-slate-800 border-none text-sm rounded p-2">
+            <option value="dashboard">대시보드</option>
+            <option value="theory">이론 학습</option>
+            <option value="written">필기 시험</option>
+            <option value="practical">실기 시험</option>
+            <option value="review">오답 노트</option>
+        </select>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 h-full overflow-y-auto bg-gray-50 p-4 md:p-8 pt-20 md:pt-8 relative">
+        
+        <!-- Dashboard Tab -->
+        <section id="dashboard" class="tab-content active max-w-5xl mx-auto">
+            <h2 class="text-3xl font-bold mb-6 text-slate-800">나의 학습 현황</h2>
+            
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center">
+                    <div class="rounded-full bg-blue-100 p-4 text-blue-600 mr-4"><i class="fas fa-tasks fa-2x"></i></div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">총 응시 횟수</p>
+                        <p class="text-2xl font-bold" id="statTotalExams">0회</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center">
+                    <div class="rounded-full bg-green-100 p-4 text-green-600 mr-4"><i class="fas fa-bullseye fa-2x"></i></div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">평균 정답률</p>
+                        <p class="text-2xl font-bold" id="statAvgScore">0%</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center">
+                    <div class="rounded-full bg-red-100 p-4 text-red-600 mr-4"><i class="fas fa-exclamation-triangle fa-2x"></i></div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">누적 오답 수</p>
+                        <p class="text-2xl font-bold" id="statWrongAns">0개</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart & Progress -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold mb-4">최근 모의고사 성적 추이</h3>
+                    <div class="relative h-64 w-full">
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold mb-4">학습 진도율 (이론)</h3>
+                    <div id="theoryProgressContainer" class="space-y-4">
+                        <!-- Progress bars will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Theory Tab -->
+        <section id="theory" class="tab-content max-w-4xl mx-auto">
+            <h2 class="text-3xl font-bold mb-6">핵심 이론 요약</h2>
+            <div class="grid gap-4" id="theoryList">
+                <!-- Theory cards generated by JS -->
+            </div>
+            
+            <!-- Theory Detail Modal (Inline) -->
+            <div id="theoryDetail" class="hidden bg-white p-6 rounded-xl shadow-lg border border-gray-200 mt-6 relative">
+                <button onclick="closeTheory()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800"><i class="fas fa-times fa-lg"></i></button>
+                <h3 id="tdTitle" class="text-2xl font-bold mb-4 text-blue-600"></h3>
+                <div id="tdContent" class="prose max-w-none text-gray-700 leading-relaxed"></div>
+                <button id="tdCompleteBtn" class="mt-6 bg-green-500 text-white px-4 py-2 rounded shadow hover:bg-green-600 transition-colors">
+                    <i class="fas fa-check"></i> 학습 완료 마킹
+                </button>
+            </div>
+        </section>
+
+        <!-- Written Exam Tab -->
+        <section id="written" class="tab-content max-w-3xl mx-auto">
+            <div id="writtenIntro" class="bg-white p-8 rounded-xl shadow-sm text-center">
+                <i class="fas fa-edit text-5xl text-blue-500 mb-4"></i>
+                <h2 class="text-3xl font-bold mb-2">필기 모의고사</h2>
+                <p class="text-gray-600 mb-6">네트워크 일반, TCP/IP, NOS, 네트워크 기기 등 출제 기준에 맞춘 실전 모의고사입니다.</p>
+                <button onclick="startQuiz('written')" class="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-bold hover:bg-blue-700 shadow-md transition-all">응시 시작 (5문제 랜덤)</button>
+            </div>
+        </section>
+
+        <!-- Practical Exam Tab -->
+        <section id="practical" class="tab-content max-w-3xl mx-auto">
+            <div id="practicalIntro" class="bg-white p-8 rounded-xl shadow-sm text-center">
+                <i class="fas fa-server text-5xl text-purple-500 mb-4"></i>
+                <h2 class="text-3xl font-bold mb-2">실기 시뮬레이션 연습</h2>
+                <p class="text-gray-600 mb-6">Windows Server, Linux 설정 및 라우터 기본 설정 명령어 등 실기 단답형/선택형 연습입니다.</p>
+                <button onclick="startQuiz('practical')" class="bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-bold hover:bg-purple-700 shadow-md transition-all">연습 시작 (5문제 랜덤)</button>
+            </div>
+        </section>
+
+        <!-- Quiz Interface (Shared by Written & Practical) -->
+        <section id="quizArea" class="tab-content max-w-3xl mx-auto hidden">
+            <div class="bg-white rounded-xl shadow-md p-6 lg:p-10 border-t-4 border-blue-500 relative">
+                <div class="flex justify-between items-center mb-6">
+                    <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-semibold" id="quizProgress">Question 1 / 5</span>
+                    <button onclick="cancelQuiz()" class="text-red-400 hover:text-red-600 text-sm font-bold">시험 종료</button>
+                </div>
+                
+                <h3 class="text-xl font-bold mb-6 text-gray-800" id="qTitle">Question text</h3>
+                
+                <div class="space-y-3" id="qOptions">
+                    <!-- Options injected here -->
+                </div>
+
+                <div class="mt-8 flex justify-between">
+                    <button id="btnPrev" onclick="navQuiz(-1)" class="px-5 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50">이전</button>
+                    <button id="btnNext" onclick="navQuiz(1)" class="px-5 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">다음</button>
+                    <button id="btnSubmit" onclick="submitQuiz()" class="px-5 py-2 rounded bg-green-500 text-white hover:bg-green-600 hidden">제출 및 채점</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quiz Result Screen -->
+        <section id="quizResult" class="tab-content max-w-3xl mx-auto hidden text-center">
+            <div class="bg-white rounded-xl shadow-md p-10 border border-gray-200">
+                <i class="fas fa-award text-6xl text-yellow-400 mb-4"></i>
+                <h2 class="text-3xl font-bold mb-2">테스트 완료!</h2>
+                <p class="text-xl text-gray-600 mb-6">최종 점수: <span id="resScore" class="font-bold text-blue-600 text-3xl">0</span> / 100</p>
+                <div class="flex justify-center space-x-4">
+                    <button onclick="switchTab('dashboard')" class="px-6 py-2 bg-gray-800 text-white rounded hover:bg-gray-900">대시보드로 이동</button>
+                    <button onclick="switchTab('review')" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">오답 노트 확인</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Review (Incorrect Answers) Tab -->
+        <section id="review" class="tab-content max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold">오답 노트</h2>
+                <button onclick="clearWrongAnswers()" class="text-sm bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200">오답 기록 전체 삭제</button>
+            </div>
+            
+            <div id="reviewList" class="space-y-4">
+                <!-- Wrong answers injected here -->
+            </div>
+            
+            <div id="emptyReview" class="hidden text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                <i class="fas fa-check-circle text-5xl text-green-400 mb-4"></i>
+                <p class="text-gray-500 text-lg">오답 기록이 없습니다. 훌륭합니다!</p>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        /* =========================================
+           1. Sample Data (Questions & Theory)
+        ========================================= */
+        const DB = {
+            theory: [
+                { id: 't1', cat: '네트워크 일반', title: 'OSI 7계층 개요', content: '<p><strong>OSI 7계층</strong>은 네트워크 통신 과정을 7단계로 나눈 표준 모델입니다.</p><ul class="list-disc pl-5 mt-2 space-y-1"><li>1계층(물리): 케이블, 리피터, 허브</li><li>2계층(데이터링크): 스위치, 브릿지 (MAC 주소)</li><li>3계층(네트워크): 라우터, L3 스위치 (IP 주소)</li><li>4계층(전송): TCP, UDP (포트 번호)</li><li>5계층(세션): 연결 유지 및 동기화</li><li>6계층(표현): 데이터 암호화, 압축</li><li>7계층(응용): HTTP, FTP, DNS 등 서비스</li></ul>' },
+                { id: 't2', cat: 'TCP/IP', title: 'IPv4 vs IPv6', content: '<p>IP 주소 체계의 발전</p><br><strong>IPv4</strong><br>- 32비트 주소 체계<br>- 유니캐스트, 멀티캐스트, 브로드캐스트 사용<br><br><strong>IPv6</strong><br>- 128비트 주소 체계<br>- 유니캐스트, 멀티캐스트, 애니캐스트 사용<br>- 보안성, 자동 설정 기능 향상' },
+                { id: 't3', cat: 'NOS', title: 'Windows Server Active Directory', content: '<p><strong>Active Directory (AD)</strong>는 Microsoft 환경에서 사용자, 컴퓨터 등의 자원을 중앙 집중적으로 관리하기 위한 디렉터리 서비스입니다.</p><br>- <strong>도메인(Domain)</strong>: AD의 기본 관리 단위<br>- <strong>도메인 컨트롤러(DC)</strong>: AD 데이터베이스를 호스팅하는 서버<br>- <strong>LDAP</strong> 프로토콜을 사용하여 데이터에 접근' },
+                { id: 't4', cat: '네트워크 기기', title: '라우터와 스위치의 차이', content: '<p><strong>스위치 (L2)</strong>: 동일한 네트워크 내에서 장치들을 연결하며, MAC 주소 테이블을 기반으로 프레임을 전달합니다.</p><br><p><strong>라우터 (L3)</strong>: 서로 다른 네트워크를 연결하며, 라우팅 테이블과 IP 주소를 기반으로 패킷의 최적 경로를 결정합니다.</p>' }
+            ],
+            written: [
+                { id: 'w1', q: 'OSI 7계층 중 네트워크 장비인 스위치(Switch)가 동작하는 계층은?', options: ['물리 계층', '데이터링크 계층', '네트워크 계층', '전송 계층'], ans: 1, exp: '스위치는 MAC 주소를 기반으로 데이터를 전달하는 2계층(데이터링크 계층) 장비입니다.' },
+                { id: 'w2', q: '다음 중 IPv4 주소의 총 비트 수는?', options: ['16 Bits', '32 Bits', '64 Bits', '128 Bits'], ans: 1, exp: 'IPv4는 32비트, IPv6는 128비트로 구성됩니다.' },
+                { id: 'w3', q: 'TCP/IP 프로토콜 군에서 비연결형 서비스로, 신뢰성은 낮지만 속도가 빠른 전송 계층 프로토콜은?', options: ['TCP', 'UDP', 'ICMP', 'IGMP'], ans: 1, exp: 'UDP(User Datagram Protocol)는 비연결성, 비신뢰성이 특징이며 실시간 스트리밍 등에 사용됩니다.' },
+                { id: 'w4', q: '클래스 C 네트워크에서 서브넷 마스크가 255.255.255.224일 때, 생성 가능한 서브넷의 개수는? (단, Subnet zero 지원)', options: ['2개', '4개', '8개', '16개'], ans: 2, exp: '224는 이진수로 11100000 입니다. 호스트 부분에서 3비트를 빌렸으므로 2^3 = 8개의 서브넷이 생성됩니다.' },
+                { id: 'w5', q: '리눅스에서 파일의 권한을 변경할 때 사용하는 명령어는?', options: ['chown', 'chmod', 'ls', 'pwd'], ans: 1, exp: 'chmod(change mode)는 파일이나 디렉토리의 권한을 변경하는 명령어입니다. chown은 소유자를 변경합니다.' },
+                { id: 'w6', q: 'Windows Server에서 DNS 서버가 IP 주소를 호스트 이름으로 변환하기 위해 사용하는 영역은?', options: ['정방향 조회 영역', '역방향 조회 영역', '루트 힌트', '조건부 전달자'], ans: 1, exp: '역방향 조회 영역(Reverse Lookup Zone)은 IP 주소를 기반으로 호스트 이름을 찾을 때(PTR 레코드) 사용됩니다.' }
+            ],
+            practical: [
+                { id: 'p1', q: '[라우터 에뮬레이터] 라우터의 사용자 모드(User Mode)에서 관리자 모드(Privileged Mode)로 전환하기 위한 명령어는?', options: ['enable', 'configure terminal', 'show running-config', 'interface fastethernet'], ans: 0, exp: 'Router> 프롬프트에서 `enable` 명령어를 입력하면 관리자 모드(Router#)로 전환됩니다.' },
+                { id: 'p2', q: '[Windows Server] 웹 서버 기능(IIS)을 설치하기 위해 서버 관리자에서 추가해야 하는 역할은 무엇인가?', options: ['Active Directory 도메인 서비스', 'DHCP 서버', '웹 서버(IIS)', '파일 및 저장소 서비스'], ans: 2, exp: 'Windows Server에서 웹 호스팅을 위해서는 웹 서버(IIS) 역할을 추가해야 합니다.' },
+                { id: 'p3', q: '[네트워크 설정] PC의 IP 주소를 자동으로 할당받기 위해 네트워크에 반드시 있어야 하는 서버는?', options: ['DNS 서버', 'DHCP 서버', 'FTP 서버', 'Proxy 서버'], ans: 1, exp: 'DHCP(Dynamic Host Configuration Protocol) 서버는 클라이언트에게 IP 주소, 서브넷 마스크, 게이트웨이 등을 자동으로 할당합니다.' },
+                { id: 'p4', q: '[리눅스 시뮬레이션] 현재 시스템에 설정된 네트워크 인터페이스의 IP 정보를 확인하는 명령어 중 올바른 것은?', options: ['ipconfig', 'netstat', 'ifconfig', 'nslookup'], ans: 2, exp: 'Windows는 ipconfig, Linux/Unix 시스템은 ifconfig(또는 ip addr)를 사용합니다.' },
+                { id: 'p5', q: '[케이블링] 다이렉트 케이블(Direct Cable)을 만들 때 양쪽 끝에 공통으로 사용할 수 있는 표준 규격은?', options: ['T568A - T568A', 'T568B - T568A', 'T568B - Console', 'Cross-over'], ans: 0, exp: '다이렉트 케이블은 양쪽 끝이 동일한 배열을 가져야 하므로 T568A-T568A 또는 T568B-T568B 여야 합니다.' }
+            ]
+        };
+
+        /* =========================================
+           2. Local Storage & State Management
+        ========================================= */
+        let state = {
+            history: [],       // Array of { date, type, score }
+            wrongAnswers: [],  // Array of question IDs
+            theoryProgress: [], // Array of theory IDs completed
+            currentTab: 'dashboard',
+            
+            // Quiz Engine State
+            quizActive: false,
+            quizQuestions: [],
+            currentQIndex: 0,
+            userAnswers: []    // Store user's selected index
+        };
+
+        let scoreChartInstance = null;
+
+        function loadData() {
+            const saved = localStorage.getItem('na2Data');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state.history = parsed.history || [];
+                state.wrongAnswers = parsed.wrongAnswers || [];
+                state.theoryProgress = parsed.theoryProgress || [];
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('na2Data', JSON.stringify({
+                history: state.history,
+                wrongAnswers: state.wrongAnswers,
+                theoryProgress: state.theoryProgress
+            }));
+        }
+
+        function clearData() {
+            if(confirm("모든 학습 기록(점수, 오답노트, 진도율)이 삭제됩니다. 계속하시겠습니까?")) {
+                localStorage.removeItem('na2Data');
+                location.reload();
+            }
+        }
+
+        /* =========================================
+           3. UI Navigation & Rendering
+        ========================================= */
+        function switchTab(tabId) {
+            // Hide all, remove active class
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+                setTimeout(() => el.style.display = 'none', 10);
+            });
+            
+            // Show target
+            const target = document.getElementById(tabId);
+            target.style.display = 'block';
+            setTimeout(() => target.classList.add('active'), 20);
+
+            // Update sidebar active state
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('text-gray-300', 'hover:bg-slate-800');
+                if(btn.getAttribute('data-target') === tabId) {
+                    btn.classList.add('bg-blue-600', 'text-white');
+                    btn.classList.remove('text-gray-300', 'hover:bg-slate-800');
+                }
+            });
+            document.getElementById('mobileMenu').value = tabId;
+
+            state.currentTab = tabId;
+
+            // Render specific tab content
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'theory') renderTheory();
+            if (tabId === 'review') renderReview();
+            if (tabId === 'written' || tabId === 'practical') {
+                document.getElementById('quizArea').style.display = 'none';
+                document.getElementById('quizResult').style.display = 'none';
+                document.getElementById(tabId + 'Intro').parentElement.style.display = 'block';
+            }
+        }
+
+        /* =========================================
+           4. Dashboard Logic (Chart & Stats)
+        ========================================= */
+        function renderDashboard() {
+            // Calculate Stats
+            const total = state.history.length;
+            const avg = total > 0 ? (state.history.reduce((sum, h) => sum + h.score, 0) / total).toFixed(1) : 0;
+            const wrongCount = state.wrongAnswers.length;
+
+            document.getElementById('statTotalExams').innerText = total + '회';
+            document.getElementById('statAvgScore').innerText = avg + '점';
+            document.getElementById('statWrongAns').innerText = wrongCount + '개';
+
+            // Theory Progress Bars
+            const progressContainer = document.getElementById('theoryProgressContainer');
+            progressContainer.innerHTML = '';
+            
+            // Group theories by category
+            const categories = {};
+            DB.theory.forEach(t => {
+                if(!categories[t.cat]) categories[t.cat] = { total:0, completed:0 };
+                categories[t.cat].total++;
+                if(state.theoryProgress.includes(t.id)) categories[t.cat].completed++;
+            });
+
+            for (const [cat, data] of Object.entries(categories)) {
+                const percentage = Math.round((data.completed / data.total) * 100);
+                progressContainer.innerHTML += `
+                    <div>
+                        <div class="flex justify-between text-sm mb-1 text-gray-700">
+                            <span>${cat}</span>
+                            <span class="font-bold">${percentage}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Chart.js
+            const ctx = document.getElementById('scoreChart').getContext('2d');
+            if (scoreChartInstance) scoreChartInstance.destroy();
+
+            // Get last 10 scores
+            const recentHistory = state.history.slice(-10);
+            const labels = recentHistory.map((_, i) => `${i+1}회차`);
+            const data = recentHistory.map(h => h.score);
+
+            if(recentHistory.length === 0) {
+                labels.push('데이터 없음');
+                data.push(0);
+            }
+
+            scoreChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '모의고사 점수',
+                        data: data,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                }
+            });
+        }
+
+        /* =========================================
+           5. Theory Logic
+        ========================================= */
+        function renderTheory() {
+            const list = document.getElementById('theoryList');
+            list.innerHTML = '';
+            
+            DB.theory.forEach(t => {
+                const isDone = state.theoryProgress.includes(t.id);
+                const icon = isDone ? '<i class="fas fa-check-circle text-green-500 mr-2"></i>' : '<i class="far fa-circle text-gray-300 mr-2"></i>';
+                
+                list.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer flex justify-between items-center" onclick="openTheoryDetail('${t.id}')">
+                        <div class="flex items-center">
+                            ${icon}
+                            <div>
+                                <span class="text-xs text-blue-500 font-bold mb-1 block">${t.cat}</span>
+                                <h4 class="text-lg font-bold text-gray-800">${t.title}</h4>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-400"></i>
+                    </div>
+                `;
+            });
+        }
+
+        function openTheoryDetail(id) {
+            const theory = DB.theory.find(t => t.id === id);
+            document.getElementById('tdTitle').innerText = theory.title;
+            document.getElementById('tdContent').innerHTML = theory.content;
+            
+            const btn = document.getElementById('tdCompleteBtn');
+            if(state.theoryProgress.includes(id)) {
+                btn.innerHTML = `<i class="fas fa-check"></i> 학습 완료됨`;
+                btn.className = "mt-6 bg-gray-400 text-white px-4 py-2 rounded shadow cursor-not-allowed";
+                btn.onclick = null;
+            } else {
+                btn.innerHTML = `<i class="fas fa-check"></i> 학습 완료 마킹`;
+                btn.className = "mt-6 bg-green-500 text-white px-4 py-2 rounded shadow hover:bg-green-600 transition-colors";
+                btn.onclick = () => markTheoryComplete(id);
+            }
+
+            document.getElementById('theoryDetail').classList.remove('hidden');
+            // Scroll to detail
+            document.getElementById('theoryDetail').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeTheory() {
+            document.getElementById('theoryDetail').classList.add('hidden');
+        }
+
+        function markTheoryComplete(id) {
+            if(!state.theoryProgress.includes(id)) {
+                state.theoryProgress.push(id);
+                saveData();
+                renderTheory(); // re-render list
+                closeTheory();
+            }
+        }
+
+        /* =========================================
+           6. Quiz Engine (Written & Practical)
+        ========================================= */
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function startQuiz(type) {
+            // Hide intros
+            document.getElementById('writtenIntro').parentElement.style.display = 'none';
+            document.getElementById('practicalIntro').parentElement.style.display = 'none';
+            
+            // Get questions
+            const sourceDB = type === 'written' ? DB.written : DB.practical;
+            
+            // Pick 5 random questions
+            state.quizQuestions = shuffle([...sourceDB]).slice(0, 5);
+            state.userAnswers = new Array(state.quizQuestions.length).fill(null);
+            state.currentQIndex = 0;
+            state.quizActive = true;
+
+            // Show UI
+            const targetSect = document.getElementById(type); // to keep tab active class
+            document.getElementById('quizArea').style.display = 'block';
+            document.getElementById('quizArea').classList.add('active');
+            
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = state.quizQuestions[state.currentQIndex];
+            document.getElementById('quizProgress').innerText = `Question ${state.currentQIndex + 1} / ${state.quizQuestions.length}`;
+            document.getElementById('qTitle').innerText = q.q;
+
+            const opts = document.getElementById('qOptions');
+            opts.innerHTML = '';
+            
+            q.options.forEach((opt, idx) => {
+                const isChecked = state.userAnswers[state.currentQIndex] === idx ? 'checked' : '';
+                opts.innerHTML += `
+                    <label class="block relative cursor-pointer group">
+                        <input type="radio" name="quizOpt" value="${idx}" class="radio-custom absolute opacity-0 w-0 h-0" onchange="selectOption(${idx})" ${isChecked}>
+                        <div class="border-2 border-gray-200 p-4 rounded-lg group-hover:border-blue-300 transition-colors bg-white font-medium text-gray-700 shadow-sm flex items-center">
+                            <span class="w-6 h-6 rounded-full border-2 border-gray-300 mr-3 flex items-center justify-center text-xs text-transparent transition-colors group-hover:border-blue-400">
+                                <i class="fas fa-circle" style="font-size: 8px;"></i>
+                            </span>
+                            ${opt}
+                        </div>
+                    </label>
+                `;
+            });
+
+            // Update custom styling for checked radio
+            setTimeout(() => {
+                document.querySelectorAll('.radio-custom:checked + div span').forEach(span => {
+                    span.classList.remove('border-gray-300', 'text-transparent');
+                    span.classList.add('border-blue-500', 'text-blue-500');
+                });
+            }, 10);
+
+            // Button states
+            document.getElementById('btnPrev').disabled = state.currentQIndex === 0;
+            
+            if (state.currentQIndex === state.quizQuestions.length - 1) {
+                document.getElementById('btnNext').classList.add('hidden');
+                document.getElementById('btnSubmit').classList.remove('hidden');
+            } else {
+                document.getElementById('btnNext').classList.remove('hidden');
+                document.getElementById('btnSubmit').classList.add('hidden');
+            }
+        }
+
+        function selectOption(idx) {
+            state.userAnswers[state.currentQIndex] = idx;
+            renderQuestion(); // Re-render to update radio UI colors
+        }
+
+        function navQuiz(step) {
+            state.currentQIndex += step;
+            renderQuestion();
+        }
+
+        function cancelQuiz() {
+            if(confirm("정말 시험을 종료하시겠습니까? 진행 사항은 저장되지 않습니다.")) {
+                document.getElementById('quizArea').style.display = 'none';
+                switchTab('dashboard');
+            }
+        }
+
+        function submitQuiz() {
+            if(state.userAnswers.includes(null)) {
+                if(!confirm("풀지 않은 문제가 있습니다. 그래도 제출하시겠습니까?")) return;
+            }
+
+            let correctCount = 0;
+            const newWrongIds = [];
+
+            state.quizQuestions.forEach((q, idx) => {
+                if(state.userAnswers[idx] === q.ans) {
+                    correctCount++;
+                } else {
+                    if(!state.wrongAnswers.includes(q.id)) {
+                        newWrongIds.push(q.id);
+                    }
+                }
+            });
+
+            const score = (correctCount / state.quizQuestions.length) * 100;
+            
+            // Save to state
+            state.history.push({
+                date: new Date().toISOString(),
+                score: score
+            });
+            state.wrongAnswers = [...state.wrongAnswers, ...newWrongIds];
+            saveData();
+
+            // Show result
+            document.getElementById('quizArea').style.display = 'none';
+            document.getElementById('quizResult').style.display = 'block';
+            document.getElementById('quizResult').classList.add('active');
+            
+            // Animate score counter
+            let currentDisplay = 0;
+            const scoreEl = document.getElementById('resScore');
+            const interval = setInterval(() => {
+                if(currentDisplay >= score) {
+                    scoreEl.innerText = score;
+                    clearInterval(interval);
+                } else {
+                    currentDisplay += 2;
+                    scoreEl.innerText = currentDisplay;
+                }
+            }, 20);
+        }
+
+        /* =========================================
+           7. Review (Incorrect Answers) Logic
+        ========================================= */
+        function renderReview() {
+            const list = document.getElementById('reviewList');
+            const empty = document.getElementById('emptyReview');
+            
+            list.innerHTML = '';
+            
+            if(state.wrongAnswers.length === 0) {
+                list.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            } else {
+                list.style.display = 'block';
+                empty.style.display = 'none';
+            }
+
+            // Find all questions from both written and practical DB
+            const allQ = [...DB.written, ...DB.practical];
+            
+            state.wrongAnswers.forEach(id => {
+                const q = allQ.find(item => item.id === id);
+                if(!q) return;
+
+                const tagColor = id.startsWith('w') ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
+                const tagText = id.startsWith('w') ? '필기' : '실기';
+
+                list.innerHTML += `
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative">
+                        <span class="${tagColor} text-xs font-bold px-2 py-1 rounded mb-3 inline-block">${tagText}</span>
+                        <h4 class="font-bold text-lg mb-4 text-gray-800">${q.q}</h4>
+                        <div class="mb-4 text-gray-600 bg-gray-50 p-3 rounded">
+                            <span class="font-bold text-red-500 mr-2">정답:</span> ${q.options[q.ans]}
+                        </div>
+                        <div class="text-sm text-gray-700 mb-4 border-l-4 border-blue-400 pl-3 py-1">
+                            <strong>해설:</strong> ${q.exp}
+                        </div>
+                        <button onclick="removeWrongAnswer('${id}')" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded">
+                            <i class="fas fa-trash-alt mr-1"></i> 목록에서 제거
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        function removeWrongAnswer(id) {
+            state.wrongAnswers = state.wrongAnswers.filter(wId => wId !== id);
+            saveData();
+            renderReview();
+        }
+
+        function clearWrongAnswers() {
+            if(confirm("오답 노트를 모두 비우시겠습니까?")) {
+                state.wrongAnswers = [];
+                saveData();
+                renderReview();
+            }
+        }
+
+        /* =========================================
+           8. Initialization
+        ========================================= */
+        window.onload = () => {
+            loadData();
+            switchTab('dashboard'); // Initial view
+        };
+
+    </script>
+</body>
+</html>
